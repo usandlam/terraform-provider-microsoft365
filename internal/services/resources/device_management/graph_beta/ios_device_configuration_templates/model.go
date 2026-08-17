@@ -27,52 +27,52 @@ type GeneralDeviceRestrictionResourceModel struct {
 	ActivationLockAllowWhenSupervised types.Bool `tfsdk:"activation_lock_allow_when_supervised"`
 
 	// Passcode
-	PasscodeRequired                              types.Bool   `tfsdk:"passcode_required"`
-	PasscodeRequiredType                          types.String `tfsdk:"passcode_required_type"`
-	PasscodeMinimumLength                         types.Int32  `tfsdk:"passcode_minimum_length"`
-	PasscodeMinutesOfInactivityBeforeLock         types.Int32  `tfsdk:"passcode_minutes_of_inactivity_before_lock"`
-	PasscodeMinutesOfInactivityBeforeScreenTimeout types.Int32 `tfsdk:"passcode_minutes_of_inactivity_before_screen_timeout"`
-	PasscodeExpirationDays                        types.Int32  `tfsdk:"passcode_expiration_days"`
-	PasscodePreviousPasscodeBlockCount            types.Int32  `tfsdk:"passcode_previous_passcode_block_count"`
-	PasscodeSignInFailureCountBeforeWipe          types.Int32  `tfsdk:"passcode_sign_in_failure_count_before_wipe"`
-	PasscodeBlockSimple                           types.Bool   `tfsdk:"passcode_block_simple"`
-	PasscodeBlockFingerprintUnlock                types.Bool   `tfsdk:"passcode_block_fingerprint_unlock"`
-	PasscodeMinimumCharacterSetCount              types.Int32  `tfsdk:"passcode_minimum_character_set_count"`
+	PasscodeRequired                               types.Bool   `tfsdk:"passcode_required"`
+	PasscodeRequiredType                           types.String `tfsdk:"passcode_required_type"`
+	PasscodeMinimumLength                          types.Int32  `tfsdk:"passcode_minimum_length"`
+	PasscodeMinutesOfInactivityBeforeLock          types.Int32  `tfsdk:"passcode_minutes_of_inactivity_before_lock"`
+	PasscodeMinutesOfInactivityBeforeScreenTimeout types.Int32  `tfsdk:"passcode_minutes_of_inactivity_before_screen_timeout"`
+	PasscodeExpirationDays                         types.Int32  `tfsdk:"passcode_expiration_days"`
+	PasscodePreviousPasscodeBlockCount             types.Int32  `tfsdk:"passcode_previous_passcode_block_count"`
+	PasscodeSignInFailureCountBeforeWipe           types.Int32  `tfsdk:"passcode_sign_in_failure_count_before_wipe"`
+	PasscodeBlockSimple                            types.Bool   `tfsdk:"passcode_block_simple"`
+	PasscodeBlockFingerprintUnlock                 types.Bool   `tfsdk:"passcode_block_fingerprint_unlock"`
+	PasscodeMinimumCharacterSetCount               types.Int32  `tfsdk:"passcode_minimum_character_set_count"`
 
 	// App Store
-	AppStoreBlocked                  types.Bool `tfsdk:"app_store_blocked"`
-	AppStoreBlockInAppPurchases      types.Bool `tfsdk:"app_store_block_in_app_purchases"`
-	AppStoreRequirePassword          types.Bool `tfsdk:"app_store_require_password"`
-	AppStoreBlockAutomaticDownloads  types.Bool `tfsdk:"app_store_block_automatic_downloads"`
+	AppStoreBlocked                 types.Bool `tfsdk:"app_store_blocked"`
+	AppStoreBlockInAppPurchases     types.Bool `tfsdk:"app_store_block_in_app_purchases"`
+	AppStoreRequirePassword         types.Bool `tfsdk:"app_store_require_password"`
+	AppStoreBlockAutomaticDownloads types.Bool `tfsdk:"app_store_block_automatic_downloads"`
 
 	// App lists
 	CompliantAppListType types.String `tfsdk:"compliant_app_list_type"`
 	CompliantAppsList    types.Set    `tfsdk:"compliant_apps_list"`
 
 	// Common device restrictions
-	CameraBlocked                       types.Bool `tfsdk:"camera_blocked"`
-	ScreenCaptureBlocked                types.Bool `tfsdk:"screen_capture_blocked"`
-	SiriBlocked                         types.Bool `tfsdk:"siri_blocked"`
-	SiriBlockedWhenLocked               types.Bool `tfsdk:"siri_blocked_when_locked"`
-	AirDropBlocked                      types.Bool `tfsdk:"airdrop_blocked"`
-	BluetoothBlockModification          types.Bool `tfsdk:"bluetooth_block_modification"`
-	CellularBlockDataRoaming            types.Bool `tfsdk:"cellular_block_data_roaming"`
-	CellularBlockVoiceRoaming           types.Bool `tfsdk:"cellular_block_voice_roaming"`
-	CellularBlockPersonalHotspot        types.Bool `tfsdk:"cellular_block_personal_hotspot"`
-	DeviceBlockEraseContentAndSettings  types.Bool `tfsdk:"device_block_erase_content_and_settings"`
-	DeviceBlockNameModification         types.Bool `tfsdk:"device_block_name_modification"`
-	ConfigurationProfileBlockChanges    types.Bool `tfsdk:"configuration_profile_block_changes"`
+	CameraBlocked                      types.Bool `tfsdk:"camera_blocked"`
+	ScreenCaptureBlocked               types.Bool `tfsdk:"screen_capture_blocked"`
+	SiriBlocked                        types.Bool `tfsdk:"siri_blocked"`
+	SiriBlockedWhenLocked              types.Bool `tfsdk:"siri_blocked_when_locked"`
+	AirDropBlocked                     types.Bool `tfsdk:"airdrop_blocked"`
+	BluetoothBlockModification         types.Bool `tfsdk:"bluetooth_block_modification"`
+	CellularBlockDataRoaming           types.Bool `tfsdk:"cellular_block_data_roaming"`
+	CellularBlockVoiceRoaming          types.Bool `tfsdk:"cellular_block_voice_roaming"`
+	CellularBlockPersonalHotspot       types.Bool `tfsdk:"cellular_block_personal_hotspot"`
+	DeviceBlockEraseContentAndSettings types.Bool `tfsdk:"device_block_erase_content_and_settings"`
+	DeviceBlockNameModification        types.Bool `tfsdk:"device_block_name_modification"`
+	ConfigurationProfileBlockChanges   types.Bool `tfsdk:"configuration_profile_block_changes"`
 
 	// iCloud / backup
-	ICloudBlockBackup            types.Bool `tfsdk:"icloud_block_backup"`
-	ICloudBlockDocumentSync      types.Bool `tfsdk:"icloud_block_document_sync"`
-	ICloudBlockPhotoStreamSync   types.Bool `tfsdk:"icloud_block_photo_stream_sync"`
-	ICloudBlockManagedAppsSync   types.Bool `tfsdk:"icloud_block_managed_apps_sync"`
+	ICloudBlockBackup          types.Bool `tfsdk:"icloud_block_backup"`
+	ICloudBlockDocumentSync    types.Bool `tfsdk:"icloud_block_document_sync"`
+	ICloudBlockPhotoStreamSync types.Bool `tfsdk:"icloud_block_photo_stream_sync"`
+	ICloudBlockManagedAppsSync types.Bool `tfsdk:"icloud_block_managed_apps_sync"`
 
 	// Safari
-	SafariBlocked           types.Bool `tfsdk:"safari_blocked"`
-	SafariBlockJavaScript   types.Bool `tfsdk:"safari_block_javascript"`
-	SafariBlockPopups       types.Bool `tfsdk:"safari_block_popups"`
+	SafariBlocked         types.Bool `tfsdk:"safari_blocked"`
+	SafariBlockJavaScript types.Bool `tfsdk:"safari_block_javascript"`
+	SafariBlockPopups     types.Bool `tfsdk:"safari_block_popups"`
 }
 
 // TrustedCertificateResourceModel describes iosTrustedRootCertificate.

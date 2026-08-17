@@ -1,7 +1,8 @@
 // Package mocks provides HTTP responders for testing the iOS device
-// configuration templates resource. This scaffold registers minimal in-memory
-// state and CRUD responders for `/deviceManagement/deviceConfigurations`
-// endpoints so acceptance tests can be written without hitting Graph.
+// configuration templates resource. It registers in-memory CRUD responders
+// for /deviceManagement/deviceConfigurations plus supporting dependency
+// endpoints (groups, roleScopeTags, assignmentFilters) so unit and
+// acceptance tests can be written without hitting Graph.
 package mocks
 
 import (
@@ -43,9 +44,10 @@ func (m *IosDeviceConfigurationTemplatesMock) RegisterMocks() {
 	mockState.assignments = make(map[string][]any)
 	mockState.Unlock()
 
+	m.registerDependencyMocks()
+
 	baseURL := "https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations"
 
-	// POST /deviceManagement/deviceConfigurations
 	httpmock.RegisterResponder("POST", baseURL, func(req *http.Request) (*http.Response, error) {
 		var body map[string]any
 		if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
@@ -68,7 +70,6 @@ func (m *IosDeviceConfigurationTemplatesMock) RegisterMocks() {
 		return httpmock.NewJsonResponse(201, body)
 	})
 
-	// GET/PATCH/DELETE and /assign for a specific id
 	httpmock.RegisterRegexpResponder("GET",
 		mustRegex(`^https://graph\.microsoft\.com/beta/deviceManagement/deviceConfigurations/([^/?]+)(\?.*)?$`),
 		func(req *http.Request) (*http.Response, error) {
@@ -79,12 +80,15 @@ func (m *IosDeviceConfigurationTemplatesMock) RegisterMocks() {
 			if !ok {
 				return httpmock.NewStringResponse(404, `{"error":{"code":"ResourceNotFound","message":"not found"}}`), nil
 			}
-			// Attach assignments if expand=assignments was requested (we always attach; caller can ignore).
 			resp := make(map[string]any, len(cfg)+1)
 			for k, v := range cfg {
 				resp[k] = v
 			}
-			resp["assignments"] = mockState.assignments[id]
+			assignments := mockState.assignments[id]
+			if assignments == nil {
+				assignments = []any{}
+			}
+			resp["assignments"] = assignments
 			return httpmock.NewJsonResponse(200, resp)
 		},
 	)
@@ -141,12 +145,121 @@ func (m *IosDeviceConfigurationTemplatesMock) RegisterMocks() {
 	)
 }
 
+// RegisterErrorMocks registers responders that always return errors, for
+// tests that exercise failure paths.
+func (m *IosDeviceConfigurationTemplatesMock) RegisterErrorMocks() {
+	mockState.Lock()
+	mockState.deviceConfigurations = make(map[string]map[string]any)
+	mockState.assignments = make(map[string][]any)
+	mockState.Unlock()
+
+	m.registerDependencyMocks()
+
+	httpmock.RegisterResponder("POST", "https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations",
+		httpmock.NewStringResponder(400, `{"error":{"code":"BadRequest","message":"Error creating iOS device configuration template"}}`))
+	httpmock.RegisterRegexpResponder("GET",
+		mustRegex(`^https://graph\.microsoft\.com/beta/deviceManagement/deviceConfigurations/[^/?]+(\?.*)?$`),
+		httpmock.NewStringResponder(404, `{"error":{"code":"ResourceNotFound","message":"not found"}}`))
+	httpmock.RegisterRegexpResponder("PATCH",
+		mustRegex(`^https://graph\.microsoft\.com/beta/deviceManagement/deviceConfigurations/[^/?]+$`),
+		httpmock.NewStringResponder(400, `{"error":{"code":"BadRequest","message":"Error updating iOS device configuration template"}}`))
+	httpmock.RegisterRegexpResponder("DELETE",
+		mustRegex(`^https://graph\.microsoft\.com/beta/deviceManagement/deviceConfigurations/[^/?]+$`),
+		httpmock.NewStringResponder(400, `{"error":{"code":"BadRequest","message":"Error deleting iOS device configuration template"}}`))
+	httpmock.RegisterRegexpResponder("POST",
+		mustRegex(`^https://graph\.microsoft\.com/beta/deviceManagement/deviceConfigurations/[^/?]+/assign$`),
+		httpmock.NewStringResponder(400, `{"error":{"code":"BadRequest","message":"Error assigning iOS device configuration template"}}`))
+}
+
+// CleanupMockState resets the in-memory mock state between tests.
+func (m *IosDeviceConfigurationTemplatesMock) CleanupMockState() {
+	mockState.Lock()
+	mockState.deviceConfigurations = make(map[string]map[string]any)
+	mockState.assignments = make(map[string][]any)
+	mockState.Unlock()
+}
+
+// registerDependencyMocks registers stub responders for the groups,
+// roleScopeTags, and assignmentFilters endpoints referenced by assignment
+// blocks. These do not affect the resource-under-test but keep the Graph
+// SDK from erroring on incidental lookups.
+func (m *IosDeviceConfigurationTemplatesMock) registerDependencyMocks() {
+	httpmock.RegisterRegexpResponder("GET",
+		mustRegex(`^https://graph\.microsoft\.com/beta/deviceManagement/roleScopeTags/([^/]+)$`),
+		func(req *http.Request) (*http.Response, error) {
+			tagID := lastSegment(req.URL.Path)
+			return httpmock.NewJsonResponse(200, map[string]any{
+				"@odata.type": "#microsoft.graph.roleScopeTag",
+				"id":          tagID,
+				"displayName": fmt.Sprintf("Role Scope Tag %s", tagID),
+				"description": "Test role scope tag",
+			})
+		},
+	)
+
+	httpmock.RegisterRegexpResponder("GET",
+		mustRegex(`^https://graph\.microsoft\.com/beta/groups/([^/]+)$`),
+		func(req *http.Request) (*http.Response, error) {
+			groupID := lastSegment(req.URL.Path)
+			return httpmock.NewJsonResponse(200, map[string]any{
+				"@odata.type":     "#microsoft.graph.group",
+				"id":              groupID,
+				"displayName":     fmt.Sprintf("Test Group %s", groupID),
+				"description":     "Test group for iOS device configuration",
+				"groupTypes":      []string{},
+				"securityEnabled": true,
+			})
+		},
+	)
+
+	httpmock.RegisterRegexpResponder("GET",
+		mustRegex(`^https://graph\.microsoft\.com/beta/deviceManagement/assignmentFilters/([^/]+)$`),
+		func(req *http.Request) (*http.Response, error) {
+			filterID := lastSegment(req.URL.Path)
+			return httpmock.NewJsonResponse(200, map[string]any{
+				"@odata.type":   "#microsoft.graph.deviceAndAppManagementAssignmentFilter",
+				"id":            filterID,
+				"displayName":   fmt.Sprintf("Test Assignment Filter %s", filterID),
+				"description":   "Test assignment filter",
+				"platform":      "iOS",
+				"rule":          "(device.deviceOwnership -eq \"Corporate\")",
+				"roleScopeTags": []string{"0"},
+			})
+		},
+	)
+
+	httpmock.RegisterRegexpResponder("GET",
+		mustRegex(`^https://graph\.microsoft\.com/beta/deviceManagement/deviceConfigurations/([^/]+)/assignments$`),
+		func(req *http.Request) (*http.Response, error) {
+			configID := secondToLastSegment(req.URL.Path)
+			mockState.Lock()
+			assignments := mockState.assignments[configID]
+			mockState.Unlock()
+			if assignments == nil {
+				assignments = []any{}
+			}
+			return httpmock.NewJsonResponse(200, map[string]any{
+				"@odata.context": fmt.Sprintf("https://graph.microsoft.com/beta/$metadata#deviceManagement/deviceConfigurations('%s')/assignments", configID),
+				"value":          assignments,
+			})
+		},
+	)
+}
+
 func mustRegex(pattern string) *regexp.Regexp {
 	return regexp.MustCompile(pattern)
 }
 
 func extractID(path string) string {
-	// path is /beta/deviceManagement/deviceConfigurations/{id}
+	return lastSegment(path)
+}
+
+func extractIDFromAssignPath(path string) string {
+	trimmed := strings.TrimSuffix(path, "/assign")
+	return lastSegment(trimmed)
+}
+
+func lastSegment(path string) string {
 	parts := strings.Split(strings.TrimSuffix(path, "/"), "/")
 	if len(parts) == 0 {
 		return ""
@@ -154,12 +267,10 @@ func extractID(path string) string {
 	return parts[len(parts)-1]
 }
 
-func extractIDFromAssignPath(path string) string {
-	// path is /beta/deviceManagement/deviceConfigurations/{id}/assign
-	trimmed := strings.TrimSuffix(path, "/assign")
-	parts := strings.Split(strings.TrimSuffix(trimmed, "/"), "/")
-	if len(parts) == 0 {
+func secondToLastSegment(path string) string {
+	parts := strings.Split(strings.TrimSuffix(path, "/"), "/")
+	if len(parts) < 2 {
 		return ""
 	}
-	return parts[len(parts)-1]
+	return parts[len(parts)-2]
 }

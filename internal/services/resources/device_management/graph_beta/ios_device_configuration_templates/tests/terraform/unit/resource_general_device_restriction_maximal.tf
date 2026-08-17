@@ -1,8 +1,6 @@
-# Terraform resource configuration for Microsoft 365 Graph Beta Device Management iOS/iPadOS Configuration Templates
-
 # Example 1: iOS General Device Restriction (with Activation Lock)
 resource "microsoft365_graph_beta_device_management_ios_device_configuration_templates" "general_restriction_example" {
-  display_name = "iOS device restrictions with Activation Lock"
+  display_name = "unit-test-iOS-general-device-restriction-example"
   description  = "Enables Activation Lock on supervised devices and enforces a passcode policy."
 
   general_device_restriction = {
@@ -24,6 +22,20 @@ resource "microsoft365_graph_beta_device_management_ios_device_configuration_tem
     app_store_block_in_app_purchases    = true
     app_store_require_password          = true
     app_store_block_automatic_downloads = false
+
+    compliant_app_list_type = "appsInListCompliant"
+    compliant_apps_list = [
+      {
+        name      = "Microsoft Outlook"
+        app_id    = "com.microsoft.Office.Outlook"
+        publisher = "Microsoft Corporation"
+      },
+      {
+        name      = "Microsoft Teams"
+        app_id    = "com.microsoft.skype.teams"
+        publisher = "Microsoft Corporation"
+      }
+    ]
 
     camera_blocked                          = false
     screen_capture_blocked                  = false
@@ -53,13 +65,23 @@ resource "microsoft365_graph_beta_device_management_ios_device_configuration_tem
   assignments = [
     {
       type        = "groupAssignmentTarget"
-      group_id    = "00000000-0000-0000-0000-000000000001"
-      filter_id   = "00000000-0000-0000-0000-000000000002"
+      group_id    = "00000000-0000-0000-0000-000000000002"
+      filter_id   = "00000000-0000-0000-0000-000000000003"
       filter_type = "include"
     },
     {
+      type        = "groupAssignmentTarget"
+      group_id    = "00000000-0000-0000-0000-000000000002"
+      filter_id   = "00000000-0000-0000-0000-000000000003"
+      filter_type = "exclude"
+    },
+    {
       type     = "exclusionGroupAssignmentTarget"
-      group_id = "00000000-0000-0000-0000-000000000003"
+      group_id = "00000000-0000-0000-0000-000000000002"
+    },
+    {
+      type     = "exclusionGroupAssignmentTarget"
+      group_id = "00000000-0000-0000-0000-000000000004"
     }
   ]
 
@@ -69,49 +91,4 @@ resource "microsoft365_graph_beta_device_management_ios_device_configuration_tem
     update = "3m"
     delete = "3m"
   }
-}
-
-# Example 2: iOS Trusted Root Certificate
-resource "microsoft365_graph_beta_device_management_ios_device_configuration_templates" "trusted_certificate_example" {
-  display_name = "iOS trusted root CA"
-  description  = "Deploys the corporate root CA to iOS/iPadOS devices."
-
-  trusted_certificate = {
-    cert_file_name           = "corp-root-ca.cer"
-    trusted_root_certificate = filebase64("${path.module}/corp-root-ca.cer")
-  }
-
-  assignments = [
-    {
-      type = "allDevicesAssignmentTarget"
-    }
-  ]
-}
-
-# Example 3: iOS General Device Restriction with a compliant apps allow-list
-resource "microsoft365_graph_beta_device_management_ios_device_configuration_templates" "compliant_apps_example" {
-  display_name = "iOS compliant apps allow-list"
-
-  general_device_restriction = {
-    compliant_app_list_type = "appsInListCompliant"
-    compliant_apps_list = [
-      {
-        name      = "Microsoft Outlook"
-        app_id    = "com.microsoft.Office.Outlook"
-        publisher = "Microsoft Corporation"
-      },
-      {
-        name      = "Microsoft Teams"
-        app_id    = "com.microsoft.skype.teams"
-        publisher = "Microsoft Corporation"
-      }
-    ]
-  }
-
-  assignments = [
-    {
-      type     = "groupAssignmentTarget"
-      group_id = "00000000-0000-0000-0000-000000000001"
-    }
-  ]
 }

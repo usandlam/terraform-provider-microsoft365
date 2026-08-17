@@ -1,0 +1,53 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: "Device Management"
+
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+## Microsoft Documentation
+
+- [iosGeneralDeviceConfiguration resource type](https://learn.microsoft.com/graph/api/resources/intune-deviceconfig-iosgeneraldeviceconfiguration?view=graph-rest-beta)
+- [iosTrustedRootCertificate resource type](https://learn.microsoft.com/graph/api/resources/intune-deviceconfig-iostrustedrootcertificate?view=graph-rest-beta)
+- [Apple device restriction settings in Microsoft Intune](https://learn.microsoft.com/intune/device-configuration/templates/ref-device-restrictions-apple)
+- [Disable Activation Lock (iOS)](https://learn.microsoft.com/intune/device-management/actions/disable-activation-lock)
+
+## Microsoft Graph API Permissions
+
+The following client `application` permissions are needed in order to use this {{.Type | lower}}:
+
+**Required:**
+- `DeviceManagementConfiguration.Read.All`
+- `DeviceManagementConfiguration.ReadWrite.All`
+
+**Optional:**
+- `None` `[N/A]`
+
+## Version History
+
+| Version | Status | Notes |
+|---------|--------|-------|
+| v0.28.0-alpha | Experimental | Initial release |
+
+## Example Usage
+
+{{ tffile "examples/resources/microsoft365_graph_beta_device_management_ios_device_configuration_templates/resource.tf" }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Important Notes
+
+- **Mutually exclusive template types**: Exactly one of `general_device_restriction` or `trusted_certificate` must be specified per resource instance.
+- **Activation Lock**: Enabling `activation_lock_allow_when_supervised` in `general_device_restriction` is how Activation Lock is turned on in Intune. Use the `microsoft365_graph_beta_device_management_managed_device_bypass_activation_lock` device action to bypass an active Activation Lock at runtime.
+- **Assignment Required**: Policies must be assigned to device or user groups to be deployed.
+
+## Import
+
+Import is supported using the following syntax:
+
+{{ codefile "shell" "examples/resources/microsoft365_graph_beta_device_management_ios_device_configuration_templates/import.sh" }}
