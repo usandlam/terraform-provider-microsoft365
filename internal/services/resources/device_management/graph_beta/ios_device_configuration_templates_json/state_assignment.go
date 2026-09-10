@@ -231,7 +231,7 @@ func mapAssignmentsToTerraform(
 					"resourceId":      data.ID.ValueString(),
 				},
 			)
-			assignmentObj["filter_id"] = types.StringValue("00000000-0000-0000-0000-000000000000")
+			assignmentObj["filter_id"] = types.StringNull()
 		}
 
 		filterType := target.GetDeviceAndAppManagementAssignmentFilterType()
