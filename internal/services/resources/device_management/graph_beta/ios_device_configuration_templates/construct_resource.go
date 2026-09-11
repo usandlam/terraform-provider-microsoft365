@@ -50,31 +50,32 @@ func constructResource(
 
 	// Determine which configuration type to construct. ModifyPlan already guarantees exactly one
 	// block is set, so the default arm is a safety net rather than the normal validation path.
+	var err error
 	switch {
 	case !data.GeneralDeviceConfiguration.IsNull() && !data.GeneralDeviceConfiguration.IsUnknown():
 		requestBody = constructIosGeneralDeviceConfiguration(ctx)
 	case !data.CustomConfiguration.IsNull() && !data.CustomConfiguration.IsUnknown():
-		requestBody = constructIosCustomConfiguration(ctx, data)
+		requestBody, err = constructIosCustomConfiguration(ctx, data)
 	case !data.TrustedCertificate.IsNull() && !data.TrustedCertificate.IsUnknown():
-		requestBody = constructIosTrustedRootCertificate(ctx, data)
+		requestBody, err = constructIosTrustedRootCertificate(ctx, data)
 	case !data.Wifi.IsNull() && !data.Wifi.IsUnknown():
-		requestBody = constructIosWiFiConfiguration(ctx, data)
+		requestBody, err = constructIosWiFiConfiguration(ctx, data)
 	case !data.ScepCertificate.IsNull() && !data.ScepCertificate.IsUnknown():
-		requestBody = constructIosScepCertificateProfile(ctx, data)
+		requestBody, err = constructIosScepCertificateProfile(ctx, data)
 	case !data.PkcsCertificate.IsNull() && !data.PkcsCertificate.IsUnknown():
-		requestBody = constructIosPkcsCertificateProfile(ctx, data)
+		requestBody, err = constructIosPkcsCertificateProfile(ctx, data)
 	case !data.EnterpriseWifi.IsNull() && !data.EnterpriseWifi.IsUnknown():
-		requestBody = constructIosEnterpriseWiFiConfiguration(ctx, data)
+		requestBody, err = constructIosEnterpriseWiFiConfiguration(ctx, data)
 	case !data.EasEmail.IsNull() && !data.EasEmail.IsUnknown():
-		requestBody = constructIosEasEmailProfileConfiguration(ctx, data)
+		requestBody, err = constructIosEasEmailProfileConfiguration(ctx, data)
 	case !data.Vpn.IsNull() && !data.Vpn.IsUnknown():
-		requestBody = constructIosVpnConfiguration(ctx, data)
+		requestBody, err = constructIosVpnConfiguration(ctx, data)
 	default:
 		return nil, errNoConfigurationType
 	}
 
-	if requestBody == nil {
-		return nil, errConstructConfiguration
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", errConstructConfiguration, err)
 	}
 
 	// Set common properties
@@ -119,7 +120,7 @@ func constructIosGeneralDeviceConfiguration(
 func constructIosCustomConfiguration(
 	ctx context.Context,
 	data *IosDeviceConfigurationTemplatesResourceModel,
-) graphmodels.DeviceConfigurationable {
+) (graphmodels.DeviceConfigurationable, error) {
 	tflog.Debug(ctx, "Constructing IosCustomConfiguration")
 
 	customConfig := graphmodels.NewIosCustomConfiguration()
@@ -127,8 +128,7 @@ func constructIosCustomConfiguration(
 	var customConfigData CustomConfigurationResourceModel
 	diags := data.CustomConfiguration.As(ctx, &customConfigData, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
-		tflog.Error(ctx, "Failed to extract custom configuration data")
-		return nil
+		return nil, fmt.Errorf("failed to extract custom configuration data: %v", diags.Errors())
 	}
 
 	convert.FrameworkToGraphString(
@@ -138,14 +138,14 @@ func constructIosCustomConfiguration(
 	convert.FrameworkToGraphBytes(customConfigData.Payload, customConfig.SetPayload)
 	convert.FrameworkToGraphString(customConfigData.PayloadName, customConfig.SetPayloadName)
 
-	return customConfig
+	return customConfig, nil
 }
 
 // constructIosTrustedRootCertificate constructs an IosTrustedRootCertificate
 func constructIosTrustedRootCertificate(
 	ctx context.Context,
 	data *IosDeviceConfigurationTemplatesResourceModel,
-) graphmodels.DeviceConfigurationable {
+) (graphmodels.DeviceConfigurationable, error) {
 	tflog.Debug(ctx, "Constructing IosTrustedRootCertificate")
 
 	certConfig := graphmodels.NewIosTrustedRootCertificate()
@@ -153,8 +153,7 @@ func constructIosTrustedRootCertificate(
 	var certData TrustedCertificateResourceModel
 	diags := data.TrustedCertificate.As(ctx, &certData, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
-		tflog.Error(ctx, "Failed to extract trusted certificate data")
-		return nil
+		return nil, fmt.Errorf("failed to extract trusted certificate data: %v", diags.Errors())
 	}
 
 	convert.FrameworkToGraphString(certData.CertFileName, certConfig.SetCertFileName)
@@ -162,26 +161,21 @@ func constructIosTrustedRootCertificate(
 	// Handle base64-encoded certificate data from filebase64()
 	if !certData.TrustedRootCertificate.IsNull() && !certData.TrustedRootCertificate.IsUnknown() {
 		certBase64 := certData.TrustedRootCertificate.ValueString()
-		if certBytes, err := base64.StdEncoding.DecodeString(certBase64); err == nil {
-			certConfig.SetTrustedRootCertificate(certBytes)
-		} else {
-			tflog.Error(
-				ctx,
-				"Failed to decode base64 certificate data",
-				map[string]any{"error": err.Error()},
-			)
-			return nil
+		certBytes, err := base64.StdEncoding.DecodeString(certBase64)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode base64 certificate data: %w", err)
 		}
+		certConfig.SetTrustedRootCertificate(certBytes)
 	}
 
-	return certConfig
+	return certConfig, nil
 }
 
 // constructIosWiFiConfiguration constructs an IosWiFiConfiguration
 func constructIosWiFiConfiguration(
 	ctx context.Context,
 	data *IosDeviceConfigurationTemplatesResourceModel,
-) graphmodels.DeviceConfigurationable {
+) (graphmodels.DeviceConfigurationable, error) {
 	tflog.Debug(ctx, "Constructing IosWiFiConfiguration")
 
 	wifiConfig := graphmodels.NewIosWiFiConfiguration()
@@ -189,8 +183,7 @@ func constructIosWiFiConfiguration(
 	var wifiData WifiResourceModel
 	diags := data.Wifi.As(ctx, &wifiData, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
-		tflog.Error(ctx, "Failed to extract wifi data")
-		return nil
+		return nil, fmt.Errorf("failed to extract wifi data: %v", diags.Errors())
 	}
 
 	convert.FrameworkToGraphString(wifiData.NetworkName, wifiConfig.SetNetworkName)
@@ -206,8 +199,7 @@ func constructIosWiFiConfiguration(
 		graphmodels.ParseWiFiSecurityType,
 		wifiConfig.SetWiFiSecurityType,
 	); err != nil {
-		tflog.Error(ctx, "Failed to set wifi security type", map[string]any{"error": err.Error()})
-		return nil
+		return nil, fmt.Errorf("failed to set wifi security type: %w", err)
 	}
 
 	convert.FrameworkToGraphString(wifiData.PreSharedKey, wifiConfig.SetPreSharedKey)
@@ -221,8 +213,7 @@ func constructIosWiFiConfiguration(
 		graphmodels.ParseWiFiProxySetting,
 		wifiConfig.SetProxySettings,
 	); err != nil {
-		tflog.Error(ctx, "Failed to set proxy settings", map[string]any{"error": err.Error()})
-		return nil
+		return nil, fmt.Errorf("failed to set proxy settings: %w", err)
 	}
 
 	convert.FrameworkToGraphString(wifiData.ProxyManualAddress, wifiConfig.SetProxyManualAddress)
@@ -232,14 +223,14 @@ func constructIosWiFiConfiguration(
 		wifiConfig.SetProxyAutomaticConfigurationUrl,
 	)
 
-	return wifiConfig
+	return wifiConfig, nil
 }
 
 // constructIosScepCertificateProfile constructs an IosScepCertificateProfile
 func constructIosScepCertificateProfile(
 	ctx context.Context,
 	data *IosDeviceConfigurationTemplatesResourceModel,
-) graphmodels.DeviceConfigurationable {
+) (graphmodels.DeviceConfigurationable, error) {
 	tflog.Debug(ctx, "Constructing IosScepCertificateProfile")
 
 	scepConfig := graphmodels.NewIosScepCertificateProfile()
@@ -247,8 +238,7 @@ func constructIosScepCertificateProfile(
 	var scepData ScepCertificateResourceModel
 	diags := data.ScepCertificate.As(ctx, &scepData, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
-		tflog.Error(ctx, "Failed to extract SCEP certificate data")
-		return nil
+		return nil, fmt.Errorf("failed to extract SCEP certificate data: %v", diags.Errors())
 	}
 
 	convert.FrameworkToGraphInt32(
@@ -261,8 +251,7 @@ func constructIosScepCertificateProfile(
 		graphmodels.ParseCertificateStore,
 		scepConfig.SetCertificateStore,
 	); err != nil {
-		tflog.Error(ctx, "Failed to set certificate store", map[string]any{"error": err.Error()})
-		return nil
+		return nil, fmt.Errorf("failed to set certificate store: %w", err)
 	}
 
 	if err := convert.FrameworkToGraphEnum(
@@ -270,12 +259,7 @@ func constructIosScepCertificateProfile(
 		graphmodels.ParseCertificateValidityPeriodScale,
 		scepConfig.SetCertificateValidityPeriodScale,
 	); err != nil {
-		tflog.Error(
-			ctx,
-			"Failed to set certificate validity period scale",
-			map[string]any{"error": err.Error()},
-		)
-		return nil
+		return nil, fmt.Errorf("failed to set certificate validity period scale: %w", err)
 	}
 
 	convert.FrameworkToGraphInt32(
@@ -288,8 +272,7 @@ func constructIosScepCertificateProfile(
 		graphmodels.ParseAppleSubjectNameFormat,
 		scepConfig.SetSubjectNameFormat,
 	); err != nil {
-		tflog.Error(ctx, "Failed to set subject name format", map[string]any{"error": err.Error()})
-		return nil
+		return nil, fmt.Errorf("failed to set subject name format: %w", err)
 	}
 
 	convert.FrameworkToGraphString(
@@ -302,12 +285,7 @@ func constructIosScepCertificateProfile(
 		scepData.SubjectAlternativeNameType,
 		scepConfig.SetSubjectAlternativeNameType,
 	); err != nil {
-		tflog.Error(
-			ctx,
-			"Failed to set subject alternative name type",
-			map[string]any{"error": err.Error()},
-		)
-		return nil
+		return nil, fmt.Errorf("failed to set subject alternative name type: %w", err)
 	}
 
 	convert.FrameworkToGraphString(
@@ -332,13 +310,11 @@ func constructIosScepCertificateProfile(
 		graphmodels.ParseKeySize,
 		scepConfig.SetKeySize,
 	); err != nil {
-		tflog.Error(ctx, "Failed to set key size", map[string]any{"error": err.Error()})
-		return nil
+		return nil, fmt.Errorf("failed to set key size: %w", err)
 	}
 
 	if err := setKeyUsage(ctx, scepData.KeyUsage, scepConfig.SetKeyUsage); err != nil {
-		tflog.Error(ctx, "Failed to set key usage", map[string]any{"error": err.Error()})
-		return nil
+		return nil, fmt.Errorf("failed to set key usage: %w", err)
 	}
 
 	if err := convertCustomSubjectAlternativeNames(
@@ -346,12 +322,7 @@ func constructIosScepCertificateProfile(
 		scepData.CustomSubjectAlternativeNames,
 		scepConfig.SetCustomSubjectAlternativeNames,
 	); err != nil {
-		tflog.Error(
-			ctx,
-			"Failed to set custom subject alternative names",
-			map[string]any{"error": err.Error()},
-		)
-		return nil
+		return nil, fmt.Errorf("failed to set custom subject alternative names: %w", err)
 	}
 
 	if err := convertExtendedKeyUsages(
@@ -359,8 +330,7 @@ func constructIosScepCertificateProfile(
 		scepData.ExtendedKeyUsages,
 		scepConfig.SetExtendedKeyUsages,
 	); err != nil {
-		tflog.Error(ctx, "Failed to set extended key usages", map[string]any{"error": err.Error()})
-		return nil
+		return nil, fmt.Errorf("failed to set extended key usages: %w", err)
 	}
 
 	if err := convert.FrameworkToGraphStringSet(
@@ -368,18 +338,17 @@ func constructIosScepCertificateProfile(
 		scepData.ScepServerUrls,
 		scepConfig.SetScepServerUrls,
 	); err != nil {
-		tflog.Error(ctx, "Failed to set SCEP server URLs", map[string]any{"error": err.Error()})
-		return nil
+		return nil, fmt.Errorf("failed to set SCEP server URLs: %w", err)
 	}
 
-	return scepConfig
+	return scepConfig, nil
 }
 
 // constructIosPkcsCertificateProfile constructs an IosPkcsCertificateProfile
 func constructIosPkcsCertificateProfile(
 	ctx context.Context,
 	data *IosDeviceConfigurationTemplatesResourceModel,
-) graphmodels.DeviceConfigurationable {
+) (graphmodels.DeviceConfigurationable, error) {
 	tflog.Debug(ctx, "Constructing IosPkcsCertificateProfile")
 
 	pkcsConfig := graphmodels.NewIosPkcsCertificateProfile()
@@ -387,8 +356,7 @@ func constructIosPkcsCertificateProfile(
 	var pkcsData PkcsCertificateResourceModel
 	diags := data.PkcsCertificate.As(ctx, &pkcsData, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
-		tflog.Error(ctx, "Failed to extract PKCS certificate data")
-		return nil
+		return nil, fmt.Errorf("failed to extract PKCS certificate data: %v", diags.Errors())
 	}
 
 	convert.FrameworkToGraphInt32(
@@ -401,8 +369,7 @@ func constructIosPkcsCertificateProfile(
 		graphmodels.ParseCertificateStore,
 		pkcsConfig.SetCertificateStore,
 	); err != nil {
-		tflog.Error(ctx, "Failed to set certificate store", map[string]any{"error": err.Error()})
-		return nil
+		return nil, fmt.Errorf("failed to set certificate store: %w", err)
 	}
 
 	if err := convert.FrameworkToGraphEnum(
@@ -410,12 +377,7 @@ func constructIosPkcsCertificateProfile(
 		graphmodels.ParseCertificateValidityPeriodScale,
 		pkcsConfig.SetCertificateValidityPeriodScale,
 	); err != nil {
-		tflog.Error(
-			ctx,
-			"Failed to set certificate validity period scale",
-			map[string]any{"error": err.Error()},
-		)
-		return nil
+		return nil, fmt.Errorf("failed to set certificate validity period scale: %w", err)
 	}
 
 	convert.FrameworkToGraphInt32(
@@ -428,8 +390,7 @@ func constructIosPkcsCertificateProfile(
 		graphmodels.ParseAppleSubjectNameFormat,
 		pkcsConfig.SetSubjectNameFormat,
 	); err != nil {
-		tflog.Error(ctx, "Failed to set subject name format", map[string]any{"error": err.Error()})
-		return nil
+		return nil, fmt.Errorf("failed to set subject name format: %w", err)
 	}
 
 	convert.FrameworkToGraphString(
@@ -442,12 +403,7 @@ func constructIosPkcsCertificateProfile(
 		pkcsData.SubjectAlternativeNameType,
 		pkcsConfig.SetSubjectAlternativeNameType,
 	); err != nil {
-		tflog.Error(
-			ctx,
-			"Failed to set subject alternative name type",
-			map[string]any{"error": err.Error()},
-		)
-		return nil
+		return nil, fmt.Errorf("failed to set subject alternative name type: %w", err)
 	}
 
 	convert.FrameworkToGraphString(
@@ -473,22 +429,17 @@ func constructIosPkcsCertificateProfile(
 		pkcsData.CustomSubjectAlternativeNames,
 		pkcsConfig.SetCustomSubjectAlternativeNames,
 	); err != nil {
-		tflog.Error(
-			ctx,
-			"Failed to set custom subject alternative names",
-			map[string]any{"error": err.Error()},
-		)
-		return nil
+		return nil, fmt.Errorf("failed to set custom subject alternative names: %w", err)
 	}
 
-	return pkcsConfig
+	return pkcsConfig, nil
 }
 
 // constructIosEnterpriseWiFiConfiguration constructs an IosEnterpriseWiFiConfiguration
 func constructIosEnterpriseWiFiConfiguration(
 	ctx context.Context,
 	data *IosDeviceConfigurationTemplatesResourceModel,
-) graphmodels.DeviceConfigurationable {
+) (graphmodels.DeviceConfigurationable, error) {
 	tflog.Debug(ctx, "Constructing IosEnterpriseWiFiConfiguration")
 
 	wifiConfig := graphmodels.NewIosEnterpriseWiFiConfiguration()
@@ -496,8 +447,7 @@ func constructIosEnterpriseWiFiConfiguration(
 	var wifiData EnterpriseWifiResourceModel
 	diags := data.EnterpriseWifi.As(ctx, &wifiData, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
-		tflog.Error(ctx, "Failed to extract enterprise wifi data")
-		return nil
+		return nil, fmt.Errorf("failed to extract enterprise wifi data: %v", diags.Errors())
 	}
 
 	// Inherited from IosWiFiConfiguration. preSharedKey is inherited too but intentionally not
@@ -515,8 +465,7 @@ func constructIosEnterpriseWiFiConfiguration(
 		graphmodels.ParseWiFiSecurityType,
 		wifiConfig.SetWiFiSecurityType,
 	); err != nil {
-		tflog.Error(ctx, "Failed to set wifi security type", map[string]any{"error": err.Error()})
-		return nil
+		return nil, fmt.Errorf("failed to set wifi security type: %w", err)
 	}
 
 	convert.FrameworkToGraphBool(
@@ -529,8 +478,7 @@ func constructIosEnterpriseWiFiConfiguration(
 		graphmodels.ParseWiFiProxySetting,
 		wifiConfig.SetProxySettings,
 	); err != nil {
-		tflog.Error(ctx, "Failed to set proxy settings", map[string]any{"error": err.Error()})
-		return nil
+		return nil, fmt.Errorf("failed to set proxy settings: %w", err)
 	}
 
 	convert.FrameworkToGraphString(wifiData.ProxyManualAddress, wifiConfig.SetProxyManualAddress)
@@ -546,8 +494,7 @@ func constructIosEnterpriseWiFiConfiguration(
 		graphmodels.ParseEapType,
 		wifiConfig.SetEapType,
 	); err != nil {
-		tflog.Error(ctx, "Failed to set EAP type", map[string]any{"error": err.Error()})
-		return nil
+		return nil, fmt.Errorf("failed to set EAP type: %w", err)
 	}
 
 	if err := convert.FrameworkToGraphEnum(
@@ -555,12 +502,7 @@ func constructIosEnterpriseWiFiConfiguration(
 		graphmodels.ParseEapFastConfiguration,
 		wifiConfig.SetEapFastConfiguration,
 	); err != nil {
-		tflog.Error(
-			ctx,
-			"Failed to set EAP-FAST configuration",
-			map[string]any{"error": err.Error()},
-		)
-		return nil
+		return nil, fmt.Errorf("failed to set EAP-FAST configuration: %w", err)
 	}
 
 	if err := convert.FrameworkToGraphEnum(
@@ -568,12 +510,7 @@ func constructIosEnterpriseWiFiConfiguration(
 		graphmodels.ParseWiFiAuthenticationMethod,
 		wifiConfig.SetAuthenticationMethod,
 	); err != nil {
-		tflog.Error(
-			ctx,
-			"Failed to set authentication method",
-			map[string]any{"error": err.Error()},
-		)
-		return nil
+		return nil, fmt.Errorf("failed to set authentication method: %w", err)
 	}
 
 	if err := convert.FrameworkToGraphEnum(
@@ -581,12 +518,7 @@ func constructIosEnterpriseWiFiConfiguration(
 		graphmodels.ParseNonEapAuthenticationMethodForEapTtlsType,
 		wifiConfig.SetInnerAuthenticationProtocolForEapTtls,
 	); err != nil {
-		tflog.Error(
-			ctx,
-			"Failed to set inner authentication protocol",
-			map[string]any{"error": err.Error()},
-		)
-		return nil
+		return nil, fmt.Errorf("failed to set inner authentication protocol: %w", err)
 	}
 
 	convert.FrameworkToGraphString(
@@ -607,12 +539,7 @@ func constructIosEnterpriseWiFiConfiguration(
 		wifiData.TrustedServerCertificateNames,
 		wifiConfig.SetTrustedServerCertificateNames,
 	); err != nil {
-		tflog.Error(
-			ctx,
-			"Failed to set trusted server certificate names",
-			map[string]any{"error": err.Error()},
-		)
-		return nil
+		return nil, fmt.Errorf("failed to set trusted server certificate names: %w", err)
 	}
 
 	// Both certificate references are navigation properties set via @odata.bind. Accumulate them
@@ -625,10 +552,7 @@ func constructIosEnterpriseWiFiConfiguration(
 		if diags := wifiData.RootCertificatesForServerValidationOdataBind.ElementsAs(
 			ctx, &rootCertRefs, false,
 		); diags.HasError() {
-			tflog.Error(ctx, "Failed to extract root certificate references", map[string]any{
-				"errors": diags.Errors(),
-			})
-			return nil
+			return nil, fmt.Errorf("failed to extract root certificate references: %v", diags.Errors())
 		}
 		if len(rootCertRefs) > 0 {
 			normalized := make([]string, 0, len(rootCertRefs))
@@ -652,14 +576,14 @@ func constructIosEnterpriseWiFiConfiguration(
 		wifiConfig.SetAdditionalData(additionalData)
 	}
 
-	return wifiConfig
+	return wifiConfig, nil
 }
 
 // constructIosEasEmailProfileConfiguration constructs an IosEasEmailProfileConfiguration
 func constructIosEasEmailProfileConfiguration(
 	ctx context.Context,
 	data *IosDeviceConfigurationTemplatesResourceModel,
-) graphmodels.DeviceConfigurationable {
+) (graphmodels.DeviceConfigurationable, error) {
 	tflog.Debug(ctx, "Constructing IosEasEmailProfileConfiguration")
 
 	easConfig := graphmodels.NewIosEasEmailProfileConfiguration()
@@ -667,8 +591,7 @@ func constructIosEasEmailProfileConfiguration(
 	var easData EasEmailResourceModel
 	diags := data.EasEmail.As(ctx, &easData, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
-		tflog.Error(ctx, "Failed to extract EAS email data")
-		return nil
+		return nil, fmt.Errorf("failed to extract EAS email data: %v", diags.Errors())
 	}
 
 	convert.FrameworkToGraphString(easData.AccountName, easConfig.SetAccountName)
@@ -679,17 +602,11 @@ func constructIosEasEmailProfileConfiguration(
 		graphmodels.ParseEasAuthenticationMethod,
 		easConfig.SetAuthenticationMethod,
 	); err != nil {
-		tflog.Error(
-			ctx,
-			"Failed to set authentication method",
-			map[string]any{"error": err.Error()},
-		)
-		return nil
+		return nil, fmt.Errorf("failed to set authentication method: %w", err)
 	}
 
 	if err := setEasServices(ctx, easData.EasServices, easConfig.SetEasServices); err != nil {
-		tflog.Error(ctx, "Failed to set EAS services", map[string]any{"error": err.Error()})
-		return nil
+		return nil, fmt.Errorf("failed to set EAS services: %w", err)
 	}
 
 	convert.FrameworkToGraphBool(
@@ -702,8 +619,7 @@ func constructIosEasEmailProfileConfiguration(
 		graphmodels.ParseEmailSyncDuration,
 		easConfig.SetDurationOfEmailToSync,
 	); err != nil {
-		tflog.Error(ctx, "Failed to set email sync duration", map[string]any{"error": err.Error()})
-		return nil
+		return nil, fmt.Errorf("failed to set email sync duration: %w", err)
 	}
 
 	if err := convert.FrameworkToGraphEnum(
@@ -711,8 +627,7 @@ func constructIosEasEmailProfileConfiguration(
 		graphmodels.ParseUserEmailSource,
 		easConfig.SetEmailAddressSource,
 	); err != nil {
-		tflog.Error(ctx, "Failed to set email address source", map[string]any{"error": err.Error()})
-		return nil
+		return nil, fmt.Errorf("failed to set email address source: %w", err)
 	}
 
 	if err := convert.FrameworkToGraphEnum(
@@ -720,8 +635,7 @@ func constructIosEasEmailProfileConfiguration(
 		graphmodels.ParseUserEmailSource,
 		easConfig.SetUsernameSource,
 	); err != nil {
-		tflog.Error(ctx, "Failed to set username source", map[string]any{"error": err.Error()})
-		return nil
+		return nil, fmt.Errorf("failed to set username source: %w", err)
 	}
 
 	// Note this is a different enum from UsernameSource above: UsernameSource (AAD) additionally
@@ -731,8 +645,7 @@ func constructIosEasEmailProfileConfiguration(
 		graphmodels.ParseUsernameSource,
 		easConfig.SetUsernameAADSource,
 	); err != nil {
-		tflog.Error(ctx, "Failed to set username AAD source", map[string]any{"error": err.Error()})
-		return nil
+		return nil, fmt.Errorf("failed to set username AAD source: %w", err)
 	}
 
 	if err := convert.FrameworkToGraphEnum(
@@ -740,12 +653,7 @@ func constructIosEasEmailProfileConfiguration(
 		graphmodels.ParseDomainNameSource,
 		easConfig.SetUserDomainNameSource,
 	); err != nil {
-		tflog.Error(
-			ctx,
-			"Failed to set user domain name source",
-			map[string]any{"error": err.Error()},
-		)
-		return nil
+		return nil, fmt.Errorf("failed to set user domain name source: %w", err)
 	}
 
 	convert.FrameworkToGraphString(easData.CustomDomainName, easConfig.SetCustomDomainName)
@@ -798,12 +706,7 @@ func constructIosEasEmailProfileConfiguration(
 		graphmodels.ParseEmailCertificateType,
 		easConfig.SetSigningCertificateType,
 	); err != nil {
-		tflog.Error(
-			ctx,
-			"Failed to set signing certificate type",
-			map[string]any{"error": err.Error()},
-		)
-		return nil
+		return nil, fmt.Errorf("failed to set signing certificate type: %w", err)
 	}
 
 	if err := convert.FrameworkToGraphEnum(
@@ -811,12 +714,7 @@ func constructIosEasEmailProfileConfiguration(
 		graphmodels.ParseEmailCertificateType,
 		easConfig.SetEncryptionCertificateType,
 	); err != nil {
-		tflog.Error(
-			ctx,
-			"Failed to set encryption certificate type",
-			map[string]any{"error": err.Error()},
-		)
-		return nil
+		return nil, fmt.Errorf("failed to set encryption certificate type: %w", err)
 	}
 
 	// All three certificate references are navigation properties. Accumulate before setting, since
@@ -844,14 +742,14 @@ func constructIosEasEmailProfileConfiguration(
 		easConfig.SetAdditionalData(additionalData)
 	}
 
-	return easConfig
+	return easConfig, nil
 }
 
 // constructIosVpnConfiguration constructs an IosVpnConfiguration
 func constructIosVpnConfiguration(
 	ctx context.Context,
 	data *IosDeviceConfigurationTemplatesResourceModel,
-) graphmodels.DeviceConfigurationable {
+) (graphmodels.DeviceConfigurationable, error) {
 	tflog.Debug(ctx, "Constructing IosVpnConfiguration")
 
 	vpnConfig := graphmodels.NewIosVpnConfiguration()
@@ -859,8 +757,7 @@ func constructIosVpnConfiguration(
 	var vpnData VpnResourceModel
 	diags := data.Vpn.As(ctx, &vpnData, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
-		tflog.Error(ctx, "Failed to extract vpn data")
-		return nil
+		return nil, fmt.Errorf("failed to extract VPN data: %v", diags.Errors())
 	}
 
 	convert.FrameworkToGraphString(vpnData.ConnectionName, vpnConfig.SetConnectionName)
@@ -870,8 +767,7 @@ func constructIosVpnConfiguration(
 		graphmodels.ParseAppleVpnConnectionType,
 		vpnConfig.SetConnectionType,
 	); err != nil {
-		tflog.Error(ctx, "Failed to set connection type", map[string]any{"error": err.Error()})
-		return nil
+		return nil, fmt.Errorf("failed to set connection type: %w", err)
 	}
 
 	if err := convert.FrameworkToGraphEnum(
@@ -879,12 +775,7 @@ func constructIosVpnConfiguration(
 		graphmodels.ParseVpnAuthenticationMethod,
 		vpnConfig.SetAuthenticationMethod,
 	); err != nil {
-		tflog.Error(
-			ctx,
-			"Failed to set authentication method",
-			map[string]any{"error": err.Error()},
-		)
-		return nil
+		return nil, fmt.Errorf("failed to set authentication method: %w", err)
 	}
 
 	convert.FrameworkToGraphString(vpnData.Identifier, vpnConfig.SetIdentifier)
@@ -894,8 +785,7 @@ func constructIosVpnConfiguration(
 		graphmodels.ParseVpnProviderType,
 		vpnConfig.SetProviderType,
 	); err != nil {
-		tflog.Error(ctx, "Failed to set provider type", map[string]any{"error": err.Error()})
-		return nil
+		return nil, fmt.Errorf("failed to set provider type: %w", err)
 	}
 
 	convert.FrameworkToGraphString(vpnData.Realm, vpnConfig.SetRealm)
@@ -918,8 +808,7 @@ func constructIosVpnConfiguration(
 		{vpnData.ExcludeList, vpnConfig.SetExcludeList, "exclude list"},
 	} {
 		if err := convert.FrameworkToGraphStringSet(ctx, set.value, set.setter); err != nil {
-			tflog.Error(ctx, "Failed to set "+set.label, map[string]any{"error": err.Error()})
-			return nil
+			return nil, fmt.Errorf("failed to set %s: %w", set.label, err)
 		}
 	}
 
@@ -947,13 +836,11 @@ func constructIosVpnConfiguration(
 	convert.FrameworkToGraphString(vpnData.UserDomain, vpnConfig.SetUserDomain)
 
 	if err := setVpnServer(ctx, vpnData.Server, vpnConfig.SetServer); err != nil {
-		tflog.Error(ctx, "Failed to set VPN server", map[string]any{"error": err.Error()})
-		return nil
+		return nil, fmt.Errorf("failed to set VPN server: %w", err)
 	}
 
 	if err := setVpnProxyServer(ctx, vpnData.ProxyServer, vpnConfig.SetProxyServer); err != nil {
-		tflog.Error(ctx, "Failed to set VPN proxy server", map[string]any{"error": err.Error()})
-		return nil
+		return nil, fmt.Errorf("failed to set VPN proxy server: %w", err)
 	}
 
 	if err := setTargetedMobileApps(
@@ -961,13 +848,11 @@ func constructIosVpnConfiguration(
 		vpnData.TargetedMobileApps,
 		vpnConfig.SetTargetedMobileApps,
 	); err != nil {
-		tflog.Error(ctx, "Failed to set targeted mobile apps", map[string]any{"error": err.Error()})
-		return nil
+		return nil, fmt.Errorf("failed to set targeted mobile apps: %w", err)
 	}
 
 	if err := setCustomData(ctx, vpnData.CustomData, vpnConfig.SetCustomData); err != nil {
-		tflog.Error(ctx, "Failed to set custom data", map[string]any{"error": err.Error()})
-		return nil
+		return nil, fmt.Errorf("failed to set custom data: %w", err)
 	}
 
 	if err := setCustomKeyValueData(
@@ -975,12 +860,7 @@ func constructIosVpnConfiguration(
 		vpnData.CustomKeyValueData,
 		vpnConfig.SetCustomKeyValueData,
 	); err != nil {
-		tflog.Error(
-			ctx,
-			"Failed to set custom key value data",
-			map[string]any{"error": err.Error()},
-		)
-		return nil
+		return nil, fmt.Errorf("failed to set custom key value data: %w", err)
 	}
 
 	if !vpnData.IdentityCertificateOdataBind.IsNull() &&
@@ -992,7 +872,7 @@ func constructIosVpnConfiguration(
 		})
 	}
 
-	return vpnConfig
+	return vpnConfig, nil
 }
 
 // Helper functions for complex conversions

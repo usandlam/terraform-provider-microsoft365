@@ -156,6 +156,9 @@ func (r *IosDeviceConfigurationTemplatesResource) Schema(
 			},
 			"general_device_configuration": schema.SingleNestedAttribute{
 				Optional: true,
+				DeprecationMessage: "Use microsoft365_graph_beta_device_management_ios_device_configuration_templates_json " +
+					"with odata_type = \"#microsoft.graph.iosGeneralDeviceConfiguration\" to manage the full property set. " +
+					"This block creates the profile shell but cannot track or reconcile device restriction settings configured outside Terraform.",
 				MarkdownDescription: "General iOS/iPadOS device restriction policy (`iosGeneralDeviceConfiguration`). " +
 					"Set this block (with no inner attributes required) to create a general device restrictions profile. " +
 					"Configure the full property set via the JSON resource or Intune portal after creation.",

@@ -215,13 +215,13 @@ func (r *IosDeviceConfigurationTemplatesResource) Update(
 	var plan IosDeviceConfigurationTemplatesResourceModel
 	var state IosDeviceConfigurationTemplatesResourceModel
 
-	tflog.Debug(ctx, fmt.Sprintf("Updating %s with ID: %s", ResourceName, state.ID.ValueString()))
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	tflog.Debug(ctx, fmt.Sprintf("Updating %s with ID: %s", ResourceName, state.ID.ValueString()))
 
 	ctx, cancel := crud.HandleTimeout(
 		ctx,

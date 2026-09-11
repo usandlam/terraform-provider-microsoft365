@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
@@ -131,8 +132,11 @@ func marshalNormalized(ctx context.Context, value any, prior types.String) types
 // roleScopeTagIdsToSet converts the decoded roleScopeTagIds value into a set of strings.
 func roleScopeTagIdsToSet(ctx context.Context, value any) types.Set {
 	raw, ok := value.([]any)
-	if !ok || len(raw) == 0 {
+	if !ok {
 		return types.SetNull(types.StringType)
+	}
+	if len(raw) == 0 {
+		return types.SetValueMust(types.StringType, []attr.Value{})
 	}
 
 	tagIds := make([]string, 0, len(raw))
