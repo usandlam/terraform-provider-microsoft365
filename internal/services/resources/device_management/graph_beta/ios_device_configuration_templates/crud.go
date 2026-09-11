@@ -272,7 +272,7 @@ func (r *IosDeviceConfigurationTemplatesResource) Update(
 	_, err = r.client.
 		DeviceManagement().
 		DeviceConfigurations().
-		ByDeviceConfigurationId(plan.ID.ValueString()).
+		ByDeviceConfigurationId(state.ID.ValueString()).
 		Assign().
 		Post(ctx, requestAssignment, nil)
 	if err != nil {
